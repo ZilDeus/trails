@@ -27,10 +27,6 @@ struct Point{
 struct Point_UV{
   float x,y,u,v;
 };
-struct Curve_Point{
-  float x,y;
-  struct Point normal;
-};
 void getMouseScreenf(GLFWwindow* win,float _return[2])
 {
   double x,y;
