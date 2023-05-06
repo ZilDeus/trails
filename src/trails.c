@@ -60,7 +60,6 @@ int main()
 {
   unsigned int maxCount = 100;
   struct Array* pointsArr = Array(sizeof(struct Point));
-  struct Array* curvePointsArr = Array(sizeof(struct Curve_Point));
   if(!glfwInit())
     return -1;
   currTime = glfwGetTime();
