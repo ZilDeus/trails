@@ -7,7 +7,6 @@
 #include <texture.h>
 #include <math.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #define STB_IMAGE_IMPLEMENTATION
@@ -53,8 +52,6 @@ float Distance(struct Point* a,struct Point* b)
 }
 struct Point MoveTo(struct Point a,struct Point b,float r)
 {
-  //a.x += (b.x*b.x + (b.x-a.x) + a.x*a.x )*r;
-  //a.y += (b.y*b.y + (b.y-a.y) + a.y*a.y )*r;
   a.y +=(b.y-a.y)*r;
   a.x +=(b.x-a.x)*r;
   return a;
@@ -63,24 +60,24 @@ int main()
 {
   unsigned int maxCount = 100;
   struct Array* pointsArr = Array(sizeof(struct Point));
+  struct Array* curvePointsArr = Array(sizeof(struct Curve_Point));
   if(!glfwInit())
     return -1;
   currTime = glfwGetTime();
   const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
   screenWidth = mode->width;
-  screenHeight = mode->height;
+  screenHeight = mode->height-1;
   glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER,GLFW_TRUE);
   glfwWindowHint(GLFW_DECORATED,GLFW_FALSE);
   glfwWindowHint(GLFW_FLOATING,GLFW_TRUE);
-  glfwWindowHint(GLFW_RESIZABLE,GLFW_TRUE);
+  glfwWindowHint(GLFW_RESIZABLE,GLFW_FALSE);
   glfwWindowHint(GLFW_MOUSE_PASSTHROUGH,GLFW_TRUE);
-  glfwWindowHint(GLFW_AUTO_ICONIFY,GLFW_FALSE);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,4);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR,6);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
   GLFWwindow* win;
-  win = glfwCreateWindow(mode->width-1,mode->height-1, "Trails",NULL,NULL);
+  win = glfwCreateWindow(screenWidth,screenHeight, "Trails",NULL,NULL);
   glfwSetInputMode(win, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
   glfwMakeContextCurrent(win);
   gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
@@ -146,33 +143,29 @@ int main()
     TextureSetIndex(FramebufferGetTexture(renderFb,0),0);
     glDrawArrays(GL_TRIANGLES,0,6);
     ShaderActivate(screenShader);
-    TextureSetIndex(FramebufferGetTexture(bloomFb,1),0);
-    		// Bounce the image data around to blur multiple times
-		char horizontal = 1, first_iteration = 1;
-		// Amount of time to bounce the blur
-		int amount = 8;
+    char horizontal = 1, first_iteration = 1;
+    int amount = 8;
+    TextureSetIndex(FramebufferGetTexture(bloomFb,1), 1);
     ShaderActivate(blurShader);
-		for (unsigned int i = 0; i < amount; i++)
-		{
+    for (unsigned int i = 0; i < amount; i++)
+    {
       FramebufferActivate(blurFbs[horizontal]);
-			glUniform1i(hori.location, horizontal);
+      glUniform1i(hori.location, horizontal);
 
-			// In the first bounc we want to get the data from the bloomTexture
-			if (first_iteration)
-			{
+      if (first_iteration)
+      {
         TextureSetIndex(FramebufferGetTexture(bloomFb,1), 1);
-				first_iteration = 0;
-			}
-			// Move the data between the pingPong textures
-			else
-			{
+        first_iteration = 0;
+      }
+      else
+      {
         TextureSetIndex(FramebufferGetTexture(blurFbs[!horizontal],0),1);
-			}
+      }
 
-			glDrawArrays(GL_TRIANGLES, 0, 6);
+      glDrawArrays(GL_TRIANGLES, 0, 6);
 
-			horizontal = !horizontal;
-		}
+      horizontal = !horizontal;
+    }
     TextureSetIndex(FramebufferGetTexture(blurFbs[!horizontal],0),1);
     TextureSetIndex(FramebufferGetTexture(bloomFb,0),0);
     glBindFramebuffer(GL_FRAMEBUFFER,0);
@@ -187,30 +180,32 @@ int main()
       struct Point* last = ArrayGetElement(pointsArr,pointsArr->count-1);
       ArrayPush(pointsArr,tempPoint);
     }
+    struct Point *a;
     if(pointsArr->count >1)
     {
-      struct Point* a = ArrayGetElement(pointsArr,0);
+      a = ArrayGetElement(pointsArr,0);
       struct Point* b = ArrayGetElement(pointsArr,1);
-      *a = MoveTo(*a,*b,deltaTime*10.0f);
+      *a = MoveTo(*a,*b,deltaTime*20.0f);
       ArraySetElement(pointsArr,0,a);
-      if (Distance(ArrayGetElement(pointsArr,0),ArrayGetElement(pointsArr,1)) < 0.001f)
-      {
-        ArrayRemoveAt(pointsArr, 0);
-      }
-      int i;
-      for (i=0;i<pointsArr->count;i++)
-      {
-        width = ((float)i/maxCount);
-        a = ArrayGetElement(pointsArr,i);
-        pointsBuffer[i*2].x = a->x+(0.01f*(width));
-        pointsBuffer[i*2].y = a->y+(0.01f*(width));
-        pointsBuffer[i*2].u = 1.0f - width;
-        pointsBuffer[i*2].v = 1.0f;
-        pointsBuffer[i*2 + 1].x = a->x-(0.01f*(width));
-        pointsBuffer[i*2 + 1].y = a->y-(0.01f*(width));
-        pointsBuffer[i*2 + 1].u = 1.0f - width;
-        pointsBuffer[i*2 + 1].v = 0.0f;
-      }
+      if(pointsArr->count>2)
+        if (Distance(ArrayGetElement(pointsArr,0),ArrayGetElement(pointsArr,1)) < 0.001f)
+        {
+          ArrayRemoveAt(pointsArr, 0);
+        }
+    }
+    int i;
+    for (i=0;i<pointsArr->count;i++)
+    {
+      width = ((float)i/maxCount);
+      a = ArrayGetElement(pointsArr,i);
+      pointsBuffer[i*2].x = a->x+(0.01f);
+      pointsBuffer[i*2].y = a->y+(0.01f);
+      pointsBuffer[i*2].u = 1.0f - width;
+      pointsBuffer[i*2].v = 1.0f;
+      pointsBuffer[i*2 + 1].x = a->x-(0.01f);
+      pointsBuffer[i*2 + 1].y = a->y-(0.01f);
+      pointsBuffer[i*2 + 1].u = 1.0f - width;
+      pointsBuffer[i*2 + 1].v = 0.0f;
     }
     glfwPollEvents();
   }

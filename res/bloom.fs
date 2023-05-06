@@ -6,7 +6,7 @@ in vec2 coords;
 void main()
 {
   FragColor =  texture(tex,coords);
-  if(texture(tex,coords).x>0.05)
+  if(true)
     BloomColor = texture(tex,coords) * 5;
   else
     BloomColor = vec4(0);

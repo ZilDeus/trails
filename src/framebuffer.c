@@ -21,14 +21,15 @@ struct Framebuffer* Framebuffer(unsigned int width,unsigned int height,unsigned 
   FramebufferAddTextures(fb,texCount);
   fb->va = VertexArray();
   float screenRect[] = {
-    1.0f,1.0f,
-    1.0f,-1.0f,
-    -1.0f,-1.0f,
-    1.0f,1.0f,
-    -1.0,-1.0f,
-    -1.0f,1.0f,
+    1.0f,1.0f,1.0f,1.0f,
+    1.0f,-1.0f,1.0f,0.0f,
+    -1.0f,-1.0f,0.0f,0.0f,
+    1.0f,1.0f,1.0f,1.0f,
+    -1.0,-1.0f,0.0f,0.0f,
+    -1.0f,1.0f,0.0f,1.0f,
   };
-  VertexArrayAddBuffer(fb->va,0,screenRect,sizeof(screenRect),sizeof(float)*2,0);
+  VertexArrayAddBuffer(fb->va,0,screenRect,sizeof(screenRect),sizeof(float)*4,0);
+  VertexArrayFormatBufferElement(fb->va,0,TYPE_FLOAT,2);
   VertexArrayFormatBufferElement(fb->va,0,TYPE_FLOAT,2);
   return fb;
 }
